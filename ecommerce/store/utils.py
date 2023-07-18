@@ -1,12 +1,13 @@
 import json
-from . models import *
+from .models import *
+
 
 def cookieCart(request):
     try:
         cart = json.loads(request.COOKIES["cart"])
     except:
         cart = {}
-        
+
     print("Cart:", cart)
     items = []
     order = {"get_cart_total": 0, "get_cart_items": 0, "shipping": False}
@@ -37,8 +38,9 @@ def cookieCart(request):
                 order["shipping"] = True
         except:
             pass
-    
-    return {'cartItems':cartItems,'order':order, 'items':items}
+
+    return {"cartItems": cartItems, "order": order, "items": items}
+
 
 def cartData(request):
     if request.user.is_authenticated:
@@ -48,8 +50,38 @@ def cartData(request):
         cartItems = order.get_cart_items
     else:
         cookieData = cookieCart(request)
-        cartItems = cookieData['cartItems']
-        order = cookieData['order']
-        items =  cookieData['items']
-        
-    return { "items": items, "order": order, "cartItems": cartItems}
+        cartItems = cookieData["cartItems"]
+        order = cookieData["order"]
+        items = cookieData["items"]
+
+    return {"items": items, "order": order, "cartItems": cartItems}
+
+
+def guestOrder(request, data):
+    print("User is not authenticated")
+    print("COOKIES:", request.COOKIES)
+    name = data["form"]["name"]
+    email = data["form"]["name"]
+
+    cookieData = cookieCart(request)
+    items = cookieData["items"]
+
+    customer, created = Customer.objects.get_or_create(
+        email=email,
+    )
+    customer.name = name
+    customer.save()
+
+    order = Order.objects.create(
+        customer=customer,
+        complete=False,
+    )
+
+    for item in items:
+        product = Product.objects.get(id=item["product"]["id"])
+        orderItem = OrderItem.objects.create(
+            product=product,
+            order=order,
+            quantity=item["quantity"],
+        )
+    return customer, order
