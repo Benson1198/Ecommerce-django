@@ -4,21 +4,15 @@ from .models import *
 import json
 import datetime
 from django.views.decorators.csrf import csrf_exempt
-from . utils import cookieCart
+from . utils import cookieCart, cartData
 
 
 # Create your views here.
 
 
 def store(request):
-    if request.user.is_authenticated:
-        customer = request.user.customer
-        order, created = Order.objects.get_or_create(customer=customer, complete=False)
-        items = order.orderitem_set.all()
-        cartItems = order.get_cart_items
-    else:
-        cookieData = cookieCart(request)
-        cartItems = cookieData['cartItems']
+    data = cartData(request)
+    cartItems = data['cartItems']
 
     products = Product.objects.all()
     context = {"products": products, "cartItems": cartItems}
@@ -26,16 +20,10 @@ def store(request):
 
 
 def cart(request):
-    if request.user.is_authenticated:
-        customer = request.user.customer
-        order, created = Order.objects.get_or_create(customer=customer, complete=False)
-        items = order.orderitem_set.all()
-        cartItems = order.get_cart_items
-    else:
-        cookieData = cookieCart(request)
-        cartItems = cookieData['cartItems']
-        order = cookieData['order']
-        items =  cookieData['items']
+    data = cartData(request)
+    cartItems = data['cartItems']
+    order = data['order']
+    items =  data['items']
 
     context = {"items": items, "order": order, "cartItems": cartItems}
     return render(request, "store/cart.html", context)
@@ -43,16 +31,10 @@ def cart(request):
 
 @csrf_exempt
 def checkout(request):
-    if request.user.is_authenticated:
-        customer = request.user.customer
-        order, created = Order.objects.get_or_create(customer=customer, complete=False)
-        items = order.orderitem_set.all()
-        cartItems = order.get_cart_items
-    else:
-        cookieData = cookieCart(request)
-        cartItems = cookieData['cartItems']
-        order = cookieData['order']
-        items =  cookieData['items']
+    data = cartData(request)
+    cartItems = data['cartItems']
+    order = data['order']
+    items =  data['items']
         
     context = {
         "items": items,
@@ -114,5 +96,27 @@ def processOrder(request):
             )
     else:
         print("User is not authenticated")
+        print('COOKIES:',request.COOKIES)
+        name = data['form']['name']
+        email = data['form']['name']
+        
+        cookieData = cookieCart(request)
+        items = cookieData['items']
+        
+        customer, created = Customer.objects.get_or_create(
+            email =  email,
+        )
+        customer.name = name
+        customer.save()
+        
+        order = Order.objects.create(customer = customer, complete = False,)
+        
+        for item in items:
+            product = Product.objects.get(id = item['product']['id'])
+            orderItem = OrderItem.objects.create(
+                product = product,
+                order = order,
+                quantity = item['quantity'],
+                ) 
 
     return JsonResponse("Payment Complete!", safe=False)
