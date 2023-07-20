@@ -96,7 +96,6 @@ def processOrder(request):
             city=data["shipping"]["city"],
             state=data["shipping"]["state"],
             zipcode=data["shipping"]["zipcode"],
-            country=data["shipping"]["country"],
         )
 
     return JsonResponse("Payment Complete!", safe=False)
